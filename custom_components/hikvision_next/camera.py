@@ -52,7 +52,27 @@ class HikvisionCamera(Camera):
             self._attr_name = camera.name
         self.entity_id = f"camera.{self.unique_id}"
         self.device = device
+        self.camera = camera
+        self.streams = camera.streams
         self.stream_info = stream_info
+        self._selected_stream_type_id = stream_info.type_id
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "available_stream_types": [s.type for s in self.streams],
+            "selected_stream_type": self.stream_info.type,
+        }
+
+    async def async_set_stream_type(self, stream_type: str):
+        """Set the stream type (main, sub, extra) for the camera."""
+        for s in self.streams:
+            if s.type == stream_type:
+                self.stream_info = s
+                self._selected_stream_type_id = s.type_id
+                await self.async_update_ha_state()
+                return
+        raise ValueError(f"Stream type '{stream_type}' not found.")
 
     async def stream_source(self) -> str | None:
         """Return the source of the stream."""
